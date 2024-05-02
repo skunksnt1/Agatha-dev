@@ -1,0 +1,32 @@
+ecidadao:
+#
+# IMPORTANTE: NÃO REMOVA OS ESPAÇOS A ESQUERDA NAS LINHAS
+#
+# Solicite seu client-id e client-secret via email riscos@economia.gov.br enviando o 
+# plano de configuração disponivel em https://softwarepublico.gov.br/social/agatha/manuais-de-usuario/plano-de-configuracao
+#
+  client-id: SOLICITAR-SGD-ME 
+  client-secret: SOLICITAR-SGD-ME
+  pre-established-redirect-uri: http://dns_definido/gestaoriscos/api/login/openid
+  sistema:
+    dominio: dns_definido
+    url-pattern-protegido: /**
+    redireciona-login-sucesso: http://dns_definido
+    redireciona-logout-sucesso: http://dns_definido
+
+  # URIS dO AMBIENTE DE TESTES do Login Único
+  access-token-uri: https://sso.staging.acesso.gov.br/token
+  user-authorization-uri: https://sso.staging.acesso.gov.br/authorize
+  validacao-uri: https://sso.staging.acesso.gov.br/jwk
+
+  # URIS dO AMBIENTE DE PRODUÇÃO do Login Único, descomentar as linhas quando solicitar as chaves de produção a SGD
+  #access-token-uri: https://sso.acesso.gov.br/token
+  #user-authorization-uri: https://sso.acesso.gov.br/authorize
+  #validacao-uri: https://sso.acesso.gov.br/jwk
+
+  use-current-uri: false
+  scope: openid
+
+
+
+
