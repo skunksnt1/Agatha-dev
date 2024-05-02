@@ -143,11 +143,11 @@
         <dependency>
             <groupId>net.sf.jasperreports</groupId>
             <artifactId>jasperreports</artifactId>
-            <version>${jasperreports.version}</version>
+            <version>6.9.0</version>
             <exclusions>
                 <exclusion>
-                    <artifactId>commons-lang</artifactId>
-                    <groupId>commons-lang</groupId>
+                    <artifactId>itext</artifactId>
+                    <groupId>com.lowagie</groupId>
                 </exclusion>
             </exclusions>
         </dependency>
