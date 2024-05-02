@@ -1,0 +1,83 @@
+#!/bin/bash
+set -e
+
+APP="/config/application.properties"
+APPYAML="/config/application.yaml"
+APPJS="/usr/share/nginx/html/scripts"
+LOGJ=/var/log/java.log
+
+#
+# Verificação do banco de dados.
+#
+if [[ "$DB_CHECK" = "1" ]]; then
+    echo "Verificando banco de dados..."
+    if [[ ! -z $DB_PASSWORD ]]; then
+        export PGPASSWORD=$DB_PASSWORD
+    fi
+
+    CREATE_SCHEMA="psql -U $DB_USER -h $DB_HOST $DB_NAME"
+
+$CREATE_SCHEMA <<SQL
+CREATE SCHEMA IF NOT EXISTS gestaoriscos AUTHORIZATION ${DB_USER};
+CREATE SCHEMA IF NOT EXISTS aud_gestaoriscos AUTHORIZATION ${DB_USER};
+ALTER USER ${DB_USER} SET search_path=gestaoriscos,aud_gestaoriscos,public;
+SQL
+fi
+
+#
+# Verificação de sobreposição dos arquivos de configuração.
+#
+if [[ "$CONF_CHECK" = "1" ]]; then
+    if [[ -f $APP  ]]; then
+        sed -i "/spring.datasource.url=/c\spring.datasource.url=jdbc:postgresql://$DB_HOST:5432/$DB_NAME" $APP
+        sed -i "/spring.datasource.username=/c\spring.datasource.username=$DB_USER" $APP
+        sed -i "/spring.datasource.password=/c\spring.datasource.password=$DB_PASSWORD" $APP
+
+        sed -i "/spring.mail.host=/c\spring.mail.host=$EMAIL_SERVIDOR" $APP
+        sed -i "/spring.mail.properties.mail.smtp.auth=/c\spring.mail.properties.mail.smtp.auth=$EMAIL_AUTENTICACAO" $APP
+        sed -i "/spring.mail.username=/c\spring.mail.username=$EMAIL_USUARIO" $APP
+        sed -i "/spring.mail.password=/c\spring.mail.password=$EMAIL_SENHA" $APP
+        sed -i "/spring.mail.properties.mail.smtp.socketFactory.port=/c\spring.mail.properties.mail.smtp.socketFactory.port=$EMAIL_PORTA" $APP
+        sed -i "/mail.remetente=/c\mail.remetente=$EMAIL_REMETENTE" $APP
+        sed -i "/mail.destinatario=/c\mail.destinatario=$EMAIL_DESTINATARIO" $APP
+        sed -i "/mail.fale.conosco=/c\mail.fale.conosco=$EMAIL_FALECONOSCO" $APP
+        sed -i "/link.sistema=/c\link.sistema=https://$ECIDADAO_SERVER" $APP
+    else
+        echo "ERRO !!!"
+        echo "NÃO FOI POSSIVEL ENCONTRAR O ARQUIVO DE CONFIGURAÇÃO application.properties"
+        exit 1
+    fi
+    if [[ -f $APPYAML ]]; then
+        sed -i "/client-id:/c\  client-id: $ECIDADAO_ID" $APPYAML
+        sed -i "/client-secret:/c\  client-secret: $ECIDADAO_SECRET" $APPYAML
+        sed -i "/pre-established-redirect-uri:/c\  pre-established-redirect-uri: https://$ECIDADAO_SERVER/gestaoriscos/api/login/openid" $APPYAML
+        sed -i "/dominio:/c\    dominio: $ECIDADAO_SERVER" $APPYAML
+        sed -i "/redireciona-login-sucesso:/c\    redireciona-login-sucesso: https://$ECIDADAO_SERVER" $APPYAML
+        sed -i "/redireciona-logout-sucesso:/c\    redireciona-logout-sucesso:  https://$ECIDADAO_SERVER" $APPYAML
+
+        if [[ "$ECIDADAO_ENV" = "PROD" ]]; then
+            sed -i "/access-token-uri:/c\  access-token-uri: https://sso.acesso.gov.br/token" $APPYAML
+            sed -i "/user-authorization-uri:/c\  user-authorization-uri: https://sso.acesso.gov.br/authorize" $APPYAML
+        else
+            sed -i "/access-token-uri:/c\  access-token-uri: https://testescp-ecidadao.estaleiro.serpro.gov.br/scp/token" $APPYAML
+            sed -i "/user-authorization-uri:/c\  user-authorization-uri: https://testescp-ecidadao.estaleiro.serpro.gov.br/scp/authorize" $APPYAML
+            sed -i '/validacao-uri:/s/^#//g' $APPYAML
+        fi
+    else
+        echo "ERRO !!!"
+        echo "NÃO FOI POSSIVEL ENCONTRAR O ARQUIVO DE CONFIGURAÇÃO application.YAML"
+        exit 1
+    fi
+fi
+
+if [[ $SIORG -ne "2981" ]]; then
+    sed -i "s/idOrgaoPai=2981/idOrgaoPai=${SIORG}/g" $APPJS/app-*.js
+    sed -i "s:orgao/2981:orgao/${SIORG}:g" $APPJS/app-*.js
+fi
+
+#
+# Inicia o Java Server
+#
+/usr/bin/java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -jar /app.jar > $LOGJ
+
+exit $?
