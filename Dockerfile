@@ -3,19 +3,21 @@
 #
 FROM alpine:3.8 AS base
 WORKDIR /
-ENV MASTER="https://softwarepublico.gov.br/gitlab/agatha/agatha/repository/archive.zip?ref=master"
+
+ENV MASTER="https://github.com/skunksnt1/Agatha-dev/archive/refs/tags/v1.0.zip"
+#ENV MASTER="https://softwarepublico.gov.br/gitlab/agatha/agatha/repository/v1.0.zip?ref=master"
 RUN apk add --update --no-cache unzip curl && \
-    curl $MASTER --output archive.zip && \
-    unzip archive.zip
+    curl $MASTER --output Agatha-dev-1.0 && \
+    unzip Agatha-dev-1.0
 
 #
 # Build do frontend (Angular)
 #
 FROM node:6-alpine AS frontend
 WORKDIR /
-COPY --from=base /agatha.git /agatha.git
+COPY --from=base /Agatha-dev-1.0 /Agatha-dev-1.0
 RUN apk add --update --no-cache make gcc g++ python git && \
-    cd /agatha.git/codigo-fonte/cliente/ \
+    cd /Agatha-dev-1.0/codigo-fonte/cliente/ \
     && mkdir bower_components && \
     npm install && \
     npm install -g bower && bower install --allow-root && \ 
@@ -26,8 +28,8 @@ RUN apk add --update --no-cache make gcc g++ python git && \
 #
 FROM maven:3-jdk-8-alpine AS backend
 WORKDIR /
-COPY --from=base /agatha.git /agatha.git
-RUN cd /agatha.git/codigo-fonte/servico/ && \
+COPY --from=base /Agatha-dev-1.0 /Agatha-dev-1.0
+RUN cd /Agatha-dev-1.0/codigo-fonte/servico/ && \
     mvn -Dmaven.test.failure.ignore -U clean package && ls -lah
 
 #
@@ -49,8 +51,8 @@ ENV JAVA_OPTS="-server -Xmx2G -XX:MinHeapFreeRatio=20 -XX:MaxHeapFreeRatio=40 -X
     ECIDADAO_SECRET="MINHAKEY" \
     SIORG="2981"
 
-COPY --from=frontend /agatha.git/codigo-fonte/cliente/dist/ /usr/share/nginx/html/
-COPY --from=backend /agatha.git/codigo-fonte/servico/target/app.jar /app.jar
+COPY --from=frontend /Agatha-dev-1.0/codigo-fonte/cliente/dist/ /usr/share/nginx/html/
+COPY --from=backend /Agatha-dev-1.0/codigo-fonte/servico/target/app.jar /app.jar
 COPY files/ /
 
 RUN apk add --update --no-cache openssl bash nginx supervisor postgresql-client \
